@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install C++ compiler
+        run: sudo apt-get update && sudo apt-get install -y g++ cmake
+
+      - name: Compile C++ engine
+        run: g++ -std=c++17 -O3 -Wall cpp_src/main.cpp -o aabb_engine
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install psutil matplotlib pytest
+
+      - name: Generate fuzzing inputs
+        run: python python_tests/fuzzer.py
+
+      - name: Run benchmark
+        run: python python_tests/benchmark.py
+
+      - name: Run regression tests
+        run: pytest python_tests/test_regression.py -v
+
+      - name: Upload benchmark graphs
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-graphs
+          path: |
+            benchmark_time.png
+            benchmark_memory.png
